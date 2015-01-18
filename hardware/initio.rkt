@@ -1,6 +1,6 @@
 #lang racket/base
 
-(require "../wiringpi-racket/wiringpi/wiringpi.rkt")
+(require "../../wiringpi-racket/wiringpi/wiringpi.rkt")
 
 ;; pin definitions
 ;; these refer to physical pin numbers on the GPIO header
@@ -15,6 +15,9 @@
 (define MOTOR-LEFT-2 21)
 (define MOTOR-RIGHT-1 24)
 (define MOTOR-RIGHT-2 26)
+
+;; sonar
+(define SONAR 8)
 
 
 ;; call to set up the hardware
@@ -41,7 +44,35 @@
     (softPwmCreate MOTOR-RIGHT-1 0 100)
     (softPwmCreate MOTOR-RIGHT-2 0 100)))
 
-;; motor-stop
+;; sonar
+(define (distance)
+  (let ([start (current-inexact-milliseconds)]
+        [init (current-inexact-milliseconds)]
+        [stop 0]
+        [count 0]
+        [elapsed 0])
+  ;; send 10uS pulse
+  (pinMode SONAR OUTPUT)
+  (digitalWrite SONAR HIGH)
+;  (sleep 0.00001)
+  (digitalWrite SONAR LOW)
+  (set! count (current-inexact-milliseconds))
+  (pinMode SONAR INPUT)
+  (do ([x 0 0])
+      ((and (= 0 (digitalRead SONAR)) 1)
+    (set! start (current-inexact-milliseconds))))
+;  (set! count (current-inexact-milliseconds))
+  (set! stop count)  
+;  (do ([x 0 0])
+;     ((and (= 1 (digitalRead SONAR)) 1)
+;    (set! stop (current-inexact-milliseconds))))
+;  (set! elapsed (- stop start))
+;  (/ (* 34 (- stop start)) 2)))
+   (display (- count init))
+   (display "\n")
+   (display (- start init))))
+  
+  ;; motor-stop
 (define (motor-stop)
   (begin
     (softPwmWrite MOTOR-LEFT-1 0)
@@ -60,6 +91,36 @@
     (sleep 1)
     (motor-stop)))
 
+(define (turn-right)
+    (softPwmWrite MOTOR-LEFT-1 70)
+    (softPwmWrite MOTOR-RIGHT-1 0)
+    (softPwmWrite MOTOR-RIGHT-2 70)
+    (sleep 1)
+    (motor-stop))
+
+(define (turn-left)
+    (softPwmWrite MOTOR-RIGHT-1 70)
+    (softPwmWrite MOTOR-LEFT-1 0)
+    (softPwmWrite MOTOR-LEFT-2 70)
+    (sleep 1)
+    (motor-stop))
+
+(define (forward)
+  (softPwmWrite MOTOR-LEFT-1 40)
+  (softPwmWrite MOTOR-RIGHT-1 40)
+  (sleep 1))
+  
+(define (reverse)
+  (softPwmWrite MOTOR-LEFT-1 0)
+  (softPwmWrite MOTOR-RIGHT-1 0)
+  (softPwmWrite MOTOR-LEFT-2 40)
+  (softPwmWrite MOTOR-RIGHT-1 40)
+  (sleep 1)
+  (motor-stop)
+  (sleep 10))
+  
+
+  
 ;; active?
 ;;
 (define (active? input)
@@ -79,11 +140,17 @@
 
 
 (define (run)
-  (do ([s (setup-bot)])
-     (#f #t)
+  (do ([s (setup-bot)]
+       [stop? #f])
+     (stop? #t)
       (display-ir)
-      (motor-test)
-      (sleep 1)))
+      (cond
+       [(active? IR-LEFT) (turn-right)]
+       [(active? IR-RIGHT) (turn-left)]
+       [(and (active? IR-LEFT) (active? IR-RIGHT)) 
+        (reverse)
+        (set! stop? #t)]
+       [else (forward)])))
     
 
 (run)
