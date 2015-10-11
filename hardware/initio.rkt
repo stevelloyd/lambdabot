@@ -115,7 +115,7 @@
   (softPwmWrite MOTOR-RIGHT-1 0)
   (softPwmWrite MOTOR-LEFT-2 40)
   (softPwmWrite MOTOR-RIGHT-2 40)
-  (sleep 1)
+  (sleep 1.5)
   (motor-stop)
   (sleep 5))
   
@@ -146,7 +146,9 @@
       (display-ir)
       (cond
        [(and (active? IR-LEFT) (active? IR-RIGHT)) 
-                (reverse)]
+                (reverse)
+                (turn-right)
+                ]
        [(active? IR-LEFT) (turn-right)]
        [(active? IR-RIGHT) (turn-left)]
        [else (forward)])))
